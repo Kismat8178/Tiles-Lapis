@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tiles Lapis - Adjacent Swap Puzzle</title>
+    <!-- Google Font for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        window.firebaseDependencies = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot };
+    </script>
+    <style>
+        /* --- Base & Typography (Deep Dark Theme) --- */
+        :root {
+            --body-bg: #0b0b1a; /* Very Dark Slate */
+            --primary-color: #ff5722; /* Orange-Red for highlights */
+            --secondary-color: #00bcd4; /* Cyan for secondary elements */
+            --tile-bg: #0f3460; /* Deep Blue for fallback tiles */
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--body-bg); 
+            color: #e4f9f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* --- Header & Stats (High Contrast Bars) --- */
+        #header {
+            width: 95%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            margin-bottom: 15px;
+        }
+        .stat {
+            background-color: #1a1a2e;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--primary-color);
+        }
+
+        /* --- Main Content Area (Seamless Look - NO BOX) --- */
+        #content-wrapper {
+            background-color: transparent; /* Removed background box */
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: none;
+            width: 95%;
+            max-width: 420px;
+            text-align: center;
+            min-height: 480px;
+            display: flex;
+            flex-direction: column;
+            border: none;
+        }
+
+        /* --- Shared UI Elements --- */
+        .view {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 900;
+            text-shadow: 0 0 5px rgba(255, 87, 34, 0.5);
+        }
+        
+        /* General Button Styling (Io Game Style) */
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.1s, transform 0.1s;
+            box-shadow: 0 5px #c2401a;
+            margin: 5px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        button:active {
+            box-shadow: 0 1px #c2401a;
+            transform: translateY(4px);
+        }
+        button.secondary-btn {
+            background-color: var(--secondary-color);
+            box-shadow: 0 5px #0097a7;
+        }
+        button.secondary-btn:active {
+            box-shadow: 0 1px #0097a7;
+            transform: translateY(4px);
+        }
+        button.back-btn {
+            background-color: var(--tile-bg);
+            box-shadow: 0 5px #0a274b;
+            margin-top: 20px;
+        }
+        button:disabled {
+            background-color: #444 !important;
+            box-shadow: 0 3px #333 !important;
+            cursor: not-allowed;
+            color: #aaa;
+        }
+
+        /* --- Main Menu Layout --- */
+        #main-title {
+            font-size: 2.5em;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+        #main-play-area button {
+            background-color: #4CAF50;
+            box-shadow: 0 7px #388E3C;
+        }
+        #main-play-area button:active {
+            box-shadow: 0 1px #388E3C;
+        }
+
+        /* --- Puzzle Grid (Game View) --- */
+        #puzzle-grid {
+            display: grid;
+            width: 100%;
+            padding-bottom: 100%;
+            position: relative;
+            margin: 15px 0;
+            border: 4px solid #4CAF50;
+            border-radius: 10px;
+            flex-shrink: 0;
+            /* Ensures 1:1 aspect ratio */
+        }
+        .tile {
+            position: absolute;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid var(--body-bg); /* Use body background for separation */
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: transform 0.1s ease-out, top 0.1s ease-out, left 0.1s ease-out; /* Faster transitions for swapping */
+            touch-action: manipulation; /* Enable touch interaction */
+            z-index: 1;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.1); 
+            border-radius: 5px;
+        }
+        
+        /* New: Selected Tile Style */
+        .tile.selected {
+            z-index: 10;
+            border: 3px solid var(--secondary-color); /* Highlight for selection */
+            box-shadow: 0 0 20px var(--secondary-color), inset 0 0 10px white;
+            transform: scale(1.05);
+        }
+
+        /* Fallback for offline mode */
+        .fallback-tile {
+            background-color: var(--tile-bg) !important;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            font-weight: 900;
+        }
+
+        /* --- Shop & Events Styling --- */
+        .store-item {
+            background-color: #1a1a2e; /* Use a darker box for individual items */
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+            border: 1px solid var(--tile-bg);
+        }
+
+        /* --- Modal Styling --- */
+        #modal {
+            background-color: rgba(0,0,0,0.9);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #1a1a2e;
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 90%;
+            width: 350px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 188, 212, 0.6);
+            border: 1px solid var(--secondary-color);
+        }
+        #modal-actions button {
+            margin: 10px 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div class="stat">
+            Level: <span id="current-level-display">--</span>
+        </div>
+        <div class="stat">
+            <span style="font-size: 1.2em;">💰</span> <span id="coin-display">--</span>
+        </div>
+    </div>
+
+    <div id="content-wrapper">
+        <!-- Main Menu View -->
+        <div id="main-menu-view" class="view" style="display: flex;">
+            <h2 id="main-title">TILES LAPIS</h2>
+            
+            <div id="main-play-area">
+                <button onclick="viewManager.showView('puzzle')">
+                    <span style="font-size: 1.5em;">▶️</span><br>
+                    PLAY LEVEL <span id="menu-level-display">--</span>
+                </button>
+            </div>
+
+            <div id="menu-secondary-options">
+                <button class="secondary-btn" onclick="viewManager.showView('shop')">
+                    🛒 SHOP
+                </button>
+                <button class="secondary-btn" onclick="viewManager.showView('events')">
+                    🎁 EVENTS
+                </button>
+            </div>
+            <div id="auth-status"></div>
+        </div>
+
+        <!-- Puzzle Game View -->
+        <div id="puzzle-view" class="view">
+            <h2 id="puzzle-status">Level -- | Swaps: 0</h2>
+            <div id="puzzle-grid"></div>
+            <div id="controls">
+                <button onclick="puzzleGame.shuffleTiles()">🔄 Reshuffle</button>
+                <button onclick="puzzleGame.useHint()">💡 Hint (<span id="hints-display">0</span>)</button>
+            </div>
+            <button class="back-btn" onclick="viewManager.showView('menu')">Exit to Menu</button>
+        </div>
+
+        <!-- Shop View -->
+        <div id="shop-view" class="view">
+            <h2>🛒 The Store</h2>
+            <p style="color: #90a4ae;">Spend coins to get better gear!</p>
+            <div id="shop-list">
+                <div class="store-item">
+                    <div class="item-details">
+                        <h4>Hint Pack (x3)</h4>
+                        <p>Reveals the correct position of one random tile.</p>
+                    </div>
+                    <button onclick="shopManager.buyItem('hints', 30)">
+                        30 💰 Buy
+                    </button>
+                </div>
+                <div class="store-item">
+                    <div class="item-details">
+                        <h4>Background Change Token (BC)</h4>
+                        <p>Get a brand new puzzle image instantly for the next level!</p>
+                    </div>
+                    <button onclick="shopManager.buyItem('bg_token', 50)">
+                        50 💰 Buy
+                    </button>
+                </div>
+                <div class="store-item">
+                    <div class="item-details">
+                        <h4>Level Skip Token (LST)</h4>
+                        <p>Skip the current level and advance to the next size.</p>
+                    </div>
+                    <button onclick="shopManager.buyItem('level_skip', 150)">
+                        150 💰 Buy
+                    </button>
+                </div>
+            </div>
+            <button class="back-btn" onclick="viewManager.showView('menu')">Back to Menu</button>
+        </div>
+
+        <!-- Events View -->
+        <div id="events-view" class="view">
+            <h2>🎁 Events & Collabs</h2>
+            <p style="color: var(--secondary-color);">Daily rewards and special coins await!</p>
+            <div id="event-list">
+                <div class="store-item">
+                    <div class="item-details">
+                        <h4>Welcome Bonus</h4>
+                        <p>Free 50 coins for joining the sliding community!</p>
+                    </div>
+                    <button id="claim-welcome" onclick="eventManager.claimWelcome(50)">
+                        Claim 50 💰
+                    </button>
+                </div>
+                <div class="store-item">
+                    <div class="item-details">
+                        <h4>Offline Status</h4>
+                        <p>The current puzzle image is cached for offline play.</p>
+                    </div>
+                    <button disabled>
+                        Ready
+                    </button>
+                </div>
+            </div>
+            <button class="back-btn" onclick="viewManager.showView('menu')">Back to Menu</button>
+        </div>
+
+    </div>
+
+    <!-- Universal Modal for Win/Error/Prompt -->
+    <div id="modal">
+        <div class="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-actions">
+                <!-- Buttons will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        const ImageCacheKey = 'puzzleImageBase64';
+
+        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot } = window.firebaseDependencies;
+
+        let app, db, auth;
+        let userId = 'loading';
+        let userData = {
+            coins: 0,
+            maxLevel: 3, 
+            currentLevel: 3,
+            hintsAvailable: 0,
+            bgTokens: 0, 
+            levelSkipTokens: 0,
+            claimedWelcome: false,
+        };
+
+        // --- Image Caching and Offline Manager ---
+
+        const imageManager = {
+            cachedImage: null,
+
+            // Converts an image URL to a Base64 string for storage
+            async urlToBase64(url) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const blob = await response.blob();
+                    return await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) {
+                    console.error("Failed to fetch image, going offline:", e);
+                    return null; // Return null on failure
+                }
+            },
+
+            // Tries to load from cache, or fetches and caches a new image
+            async getOrCreateImage(forceNew = false) {
+                if (!forceNew && this.cachedImage) {
+                    return this.cachedImage;
+                }
+
+                if (!forceNew && localStorage.getItem(ImageCacheKey)) {
+                    this.cachedImage = localStorage.getItem(ImageCacheKey);
+                    return this.cachedImage;
+                }
+
+                // If forceNew or no cache exists, fetch a new image (400x400)
+                const newImageBase64 = await this.urlToBase64('https://picsum.photos/400/400?random=' + Date.now());
+                
+                if (newImageBase64) {
+                    localStorage.setItem(ImageCacheKey, newImageBase64);
+                    this.cachedImage = newImageBase64;
+                    return newImageBase64;
+                } else {
+                    // Fallback to solid color if offline/failed to fetch
+                    console.warn("Using offline mode fallback placeholder.");
+                    this.cachedImage = null; // Signal that no Base64 image is available
+                    return null; 
+                }
+            },
+            
+            // Forces a new image, used when buying a BG token or advancing a level
+            async changeBackground() {
+                localStorage.removeItem(ImageCacheKey);
+                this.cachedImage = null;
+                // Pre-fetch the new image so it's ready for the next game
+                return this.getOrCreateImage(true);
+            }
+        };
+
+        // --- View Management ---
+        const viewManager = {
+            views: {
+                'menu': document.getElementById('main-menu-view'),
+                'puzzle': document.getElementById('puzzle-view'),
+                'shop': document.getElementById('shop-view'),
+                'events': document.getElementById('events-view')
+            },
+            currentView: 'menu',
+            async showView(viewName) {
+                if (this.views[viewName]) {
+                    this.views[this.currentView].style.display = 'none';
+                    this.views[viewName].style.display = 'flex';
+                    this.currentView = viewName;
+
+                    if (viewName === 'puzzle') {
+                        await imageManager.getOrCreateImage();
+                        puzzleGame.startGame(userData.currentLevel);
+                    }
+                    dataManager.updateUI();
+                }
+            }
+        };
+
+        // --- Data Persistence and Initialization ---
+
+        const dataManager = {
+            dbRef: null,
+            async initFirebase() {
+                try {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    
+                    await new Promise(resolve => onAuthStateChanged(auth, user => {
+                        if (user) {
+                            userId = user.uid;
+                            document.getElementById('auth-status').textContent = `User ID: ${userId}`;
+                            this.dbRef = doc(db, 'artifacts', appId, 'users', userId, 'game_data', 'puzzleState');
+                            resolve();
+                        } else {
+                            console.error("Authentication failed.");
+                        }
+                    }));
+                    
+                    this.startSnapshotListener();
+
+                } catch (error) {
+                    console.error("Firebase Initialization Error:", error);
+                    document.getElementById('auth-status').textContent = `Auth Error: ${error.code}`;
+                }
+            },
+
+            startSnapshotListener() {
+                if (!this.dbRef) return;
+
+                onSnapshot(this.dbRef, async (docSnap) => {
+                    if (docSnap.exists()) {
+                        userData = { ...userData, ...docSnap.data() };
+                    } else {
+                        await setDoc(this.dbRef, userData);
+                    }
+                    this.updateUI();
+                }, (error) => {
+                    console.error("Firestore Snapshot Error:", error);
+                    modal.show('Data Error', 'Could not load game data. Check your console for details.', [{ text: 'OK', action: 'modal.hide()' }]);
+                });
+            },
+
+            async saveUserData() {
+                if (!this.dbRef) return;
+                try {
+                    await setDoc(this.dbRef, userData);
+                } catch (error) {
+                    console.error("Error saving data:", error);
+                }
+            },
+
+            updateUI() {
+                document.getElementById('coin-display').textContent = userData.coins;
+                document.getElementById('current-level-display').textContent = userData.currentLevel;
+                document.getElementById('hints-display').textContent = userData.hintsAvailable;
+                document.getElementById('menu-level-display').textContent = userData.currentLevel + 'x' + userData.currentLevel;
+
+                const welcomeBtn = document.getElementById('claim-welcome');
+                if (userData.claimedWelcome) {
+                    welcomeBtn.textContent = 'Claimed!';
+                    welcomeBtn.disabled = true;
+                    welcomeBtn.style.backgroundColor = '#4CAF50';
+                    welcomeBtn.style.boxShadow = '0 3px #388E3C';
+                } else {
+                    welcomeBtn.textContent = 'Claim 50 💰';
+                    welcomeBtn.disabled = false;
+                    welcomeBtn.style.backgroundColor = 'var(--primary-color)';
+                    welcomeBtn.style.boxShadow = '0 3px #c2401a';
+                }
+            }
+        };
+
+        // --- Shop Management ---
+
+        const shopManager = {
+            async buyItem(item, cost) {
+                if (userData.coins < cost) {
+                    modal.show('Not Enough Coins!', `You need ${cost} 💰 to buy this. You currently have ${userData.coins} 💰.`, [{ text: 'Close', action: 'modal.hide()' }]);
+                    return;
+                }
+
+                userData.coins -= cost;
+                
+                let message = '';
+                if (item === 'hints') {
+                    userData.hintsAvailable += 3;
+                    message = '3 Hints have been added to your inventory.';
+                } else if (item === 'bg_token') {
+                    await imageManager.changeBackground();
+                    message = 'The puzzle background has been refreshed for your next game!';
+                } else if (item === 'level_skip') {
+                    if (userData.currentLevel >= 6) {
+                        userData.coins += cost; // Refund
+                        message = 'You are already at max level (6x6). No need to skip!';
+                    } else {
+                        userData.currentLevel = Math.min(userData.currentLevel + 1, 6);
+                        message = `You skipped to Level ${userData.currentLevel}x${userData.currentLevel}!`;
+                    }
+                }
+                
+                await dataManager.saveUserData();
+                modal.show('Purchase Successful!', message, [{ text: 'Awesome!', action: 'modal.hide()' }]);
+            }
+        };
+
+        // --- Event Management ---
+
+        const eventManager = {
+            async claimWelcome(amount) {
+                if (userData.claimedWelcome) return;
+
+                userData.coins += amount;
+                userData.claimedWelcome = true;
+
+                await dataManager.saveUserData();
+                modal.show('Bonus Claimed! 🎉', 
+                    `You received ${amount} 💰! Your coins are now ${userData.coins}.`, 
+                    [{ text: 'Got It!', action: 'modal.hide()' }] 
+                );
+            }
+        };
+
+        // --- Puzzle Game Logic (Swap Puzzle Logic) ---
+
+        const puzzleGame = {
+            tiles: [], size: 0, moves: 0, isSolving: false,
+            GRID_DIV: document.getElementById('puzzle-grid'),
+            selectedTile: null, 
+
+            startGame(size) {
+                this.size = size;
+                this.moves = 0;
+                this.isSolving = false;
+                this.selectedTile = null;
+                
+                this.updateGridStyles(size);
+                this.generateTiles(size, imageManager.cachedImage); 
+                this.shuffleTiles();
+                this.renderTiles();
+                this.updateStatus();
+            },
+
+            updateGridStyles(size) {
+                this.GRID_DIV.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+                this.GRID_DIV.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+            },
+
+            generateTiles(size, imageBase64) {
+                this.tiles = [];
+                const totalTiles = size * size;
+                const tileSizePercentage = 100 / size;
+                this.GRID_DIV.innerHTML = '';
+                
+                for (let i = 0; i < totalTiles; i++) {
+                    const row = Math.floor(i / size);
+                    const col = i % size;
+
+                    const tile = {
+                        id: i, 
+                        correctPos: i, 
+                        currentPos: i, 
+                        row: row, 
+                        col: col, 
+                        el: document.createElement('div')
+                    };
+
+                    tile.el.className = 'tile';
+                    tile.el.style.width = `${tileSizePercentage}%`;
+                    tile.el.style.height = `${tileSizePercentage}%`;
+                    
+                    if (imageBase64) {
+                        tile.el.style.backgroundImage = `url('${imageBase64}')`;
+                        const bgX = (col / (size - 1)) * 100;
+                        const bgY = (row / (size - 1)) * 100;
+                        tile.el.style.backgroundPosition = `${bgX}% ${bgY}%`;
+                        tile.el.style.backgroundSize = `${size * 100}% ${size * 100}%`;
+                    } else {
+                        // Offline Fallback style: Display number
+                        tile.el.classList.add('fallback-tile');
+                        tile.el.textContent = (i + 1).toString();
+                    }
+                    
+                    // Attach click/tap handler for swapping
+                    tile.el.addEventListener('click', () => this.handleTileClick(tile));
+
+                    this.tiles.push(tile);
+                    this.GRID_DIV.appendChild(tile.el);
+                }
+            },
+
+            shuffleTiles() { 
+                const totalTiles = this.tiles.length;
+                const tempPositions = Array.from({length: totalTiles}, (_, i) => i);
+                let solvable = false;
+                
+                // Shuffle until an even permutation (solvable for swap puzzle) is found
+                while (!solvable) {
+                    for (let i = totalTiles - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [tempPositions[i], tempPositions[j]] = [tempPositions[j], tempPositions[i]];
+                    }
+                    
+                    for (let i = 0; i < totalTiles; i++) {
+                        // Find the position index where the tile with ID 'i' landed
+                        this.tiles[i].currentPos = tempPositions.findIndex(p => p === this.tiles[i].id); 
+                    }
+                    // Solvable if the permutation is even
+                    solvable = this.isSolvable(tempPositions); 
+                }
+
+                this.updateTilePositions();
+                this.renderTiles();
+                this.moves = 0; 
+                this.updateStatus();
+            },
+
+            isSolvable(positions) { 
+                // For an N^2 Swap Puzzle, it's solvable if the total number of inversions is even.
+                let inversions = 0;
+                
+                for (let i = 0; i < positions.length; i++) {
+                    for (let j = i + 1; j < positions.length; j++) {
+                        // Check if a tile with a smaller ID is placed after a tile with a larger ID 
+                        // The 'positions' array holds the ID of the tile at that position index.
+                        if (positions[i] > positions[j]) { 
+                             inversions++;
+                        }
+                    }
+                }
+                
+                return inversions % 2 === 0;
+            },
+            
+            updateTilePositions() { 
+                const size = this.size;
+                // Update the row/col properties of each tile based on its current position index
+                for (let i = 0; i < this.tiles.length; i++) {
+                    const tile = this.tiles.find(t => t.currentPos === i); 
+                    if (tile) {
+                        tile.row = Math.floor(i / size);
+                        tile.col = i % size;
+                    }
+                }
+            },
+            
+            renderTiles() { 
+                const size = this.size;
+                const tileSizePercentage = 100 / size;
+                // Sort by current position index for correct grid drawing
+                const sortedTiles = this.tiles.sort((a, b) => a.currentPos - b.currentPos);
+
+                sortedTiles.forEach(tile => {
+                    const index = tile.currentPos;
+                    const col = index % size;
+                    const row = Math.floor(index / size);
+                    tile.el.style.left = `${col * tileSizePercentage}%`;
+                    tile.el.style.top = `${row * tileSizePercentage}%`;
+                    tile.el.style.transform = `translate(0px, 0px)`;
+                });
+                this.updateTilePositions();
+            },
+            
+            isAdjacent(tileA, tileB) {
+                const dx = Math.abs(tileA.col - tileB.col);
+                const dy = Math.abs(tileA.row - tileB.row);
+                // Must be 1 unit distance in one axis, 0 in the other
+                return (dx + dy === 1);
+            },
+            
+            async swapTilePositions(tileA, tileB) {
+                // Remove selection highlight before the swap animation
+                tileA.el.classList.remove('selected');
+                
+                // Swap the positional indices in the data model
+                [tileA.currentPos, tileB.currentPos] = [tileB.currentPos, tileA.currentPos];
+                
+                this.moves++;
+                this.updateStatus();
+                this.renderTiles(); // Re-render to trigger the CSS transition for the swap
+
+                if (this.checkWin()) {
+                    await this.handleWin();
+                }
+            },
+
+            handleTileClick(clickedTile) {
+                if (this.isSolving) return;
+
+                if (this.selectedTile === clickedTile) {
+                    // Deselect if clicking the same tile
+                    this.selectedTile.el.classList.remove('selected');
+                    this.selectedTile = null;
+                } else if (this.selectedTile) {
+                    // Check if the newly clicked tile is adjacent to the selected one
+                    if (this.isAdjacent(this.selectedTile, clickedTile)) {
+                        this.swapTilePositions(this.selectedTile, clickedTile);
+                        this.selectedTile = null;
+                    } else {
+                        // Not adjacent: Deselect old, select new
+                        this.selectedTile.el.classList.remove('selected');
+                        this.selectedTile = clickedTile;
+                        this.selectedTile.el.classList.add('selected');
+                    }
+                } else {
+                    // No tile selected: Select the clicked tile
+                    this.selectedTile = clickedTile;
+                    this.selectedTile.el.classList.add('selected');
+                }
+            },
+
+            checkWin() { 
+                // Win state is achieved when currentPos matches correctPos for all tiles
+                return this.tiles.every(tile => tile.id === tile.currentPos); 
+            },
+
+            async handleWin() {
+                this.isSolving = true;
+                userData.coins += 10;
+                userData.currentLevel = Math.min(userData.currentLevel + 1, 6);
+                userData.maxLevel = Math.max(userData.maxLevel, userData.currentLevel);
+                // Trigger image change for the *next* game
+                imageManager.changeBackground(); 
+
+                await dataManager.saveUserData();
+                dataManager.updateUI(); // Update coins/level display right away
+
+                const actions = [
+                    { text: 'Next Level (' + userData.currentLevel + 'x' + userData.currentLevel + ')', action: `puzzleGame.startGame(${userData.currentLevel}); modal.hide();` },
+                    { text: 'Menu', action: `viewManager.showView('menu'); modal.hide();` }
+                ];
+
+                modal.show('Level Cleared! 🎉', 
+                    `You earned 10 💰 and completed Level ${this.size}x${this.size} in ${this.moves} swaps! The next challenge is $${userData.currentLevel} \times ${userData.currentLevel}$`, 
+                    actions);
+            },
+
+            updateStatus() {
+                document.getElementById('puzzle-status').textContent = `Level ${this.size}x${this.size} | Swaps: ${this.moves}`;
+                document.getElementById('hints-display').textContent = userData.hintsAvailable;
+            },
+
+            async useHint() {
+                if (userData.hintsAvailable < 1) {
+                    modal.show('No Hints!', 'You need to buy hints from the Shop first.', [{ text: 'Go to Shop', action: "viewManager.showView('shop'); modal.hide();" }]);
+                    return;
+                }
+                
+                const unsolvedTiles = this.tiles.filter(t => t.id !== t.currentPos);
+                if (unsolvedTiles.length === 0) {
+                    modal.show('Puzzle Solved!', 'You already finished the puzzle!', [{ text: 'OK', action: 'modal.hide()' }]);
+                    return;
+                }
+
+                userData.hintsAvailable--;
+                await dataManager.saveUserData();
+                dataManager.updateUI(); // Update hint count immediately
+
+                const hintTile = unsolvedTiles[Math.floor(Math.random() * unsolvedTiles.length)];
+                
+                // Temporarily highlight the tile
+                hintTile.el.style.border = '3px solid #FF0000';
+                setTimeout(() => hintTile.el.style.border = '2px solid var(--body-bg)', 1500); // Revert
+
+                const correctRow = Math.floor(hintTile.correctPos / this.size) + 1;
+                const correctCol = (hintTile.correctPos % this.size) + 1;
+
+                modal.show('Hint Used! 💡', 
+                    `The highlighted tile (Tile #${hintTile.id + 1}) belongs in Row ${correctRow}, Column ${correctCol}.`, 
+                    [{ text: 'Got it!', action: 'modal.hide()' }]);
+            },
+        };
+
+        // --- Modal System ---
+
+        const modal = {
+            element: document.getElementById('modal'),
+            title: document.getElementById('modal-title'),
+            message: document.getElementById('modal-message'),
+            actionsContainer: document.getElementById('modal-actions'),
+            
+            show(title, message, actions) {
+                this.title.textContent = title;
+                this.message.textContent = message;
+                this.actionsContainer.innerHTML = '';
+                
+                if (Array.isArray(actions)) {
+                    actions.forEach(action => {
+                        const button = document.createElement('button');
+                        button.textContent = action.text;
+                        button.onclick = () => {
+                            try {
+                                eval(action.action);
+                            } catch (e) {
+                                console.error("Error executing modal action:", e);
+                                modal.hide();
+                            }
+                        };
+                        this.actionsContainer.appendChild(button);
+                    });
+                } else {
+                    const button = document.createElement('button');
+                    button.textContent = 'Close';
+                    button.onclick = () => this.hide();
+                    this.actionsContainer.appendChild(button);
+                }
+                
+                this.element.style.display = 'flex';
+            },
+
+            hide() {
+                this.element.style.display = 'none';
+            }
+        };
+
+
+        // --- Startup ---
+        window.onload = () => {
+            window.viewManager = viewManager;
+            window.puzzleGame = puzzleGame;
+            window.shopManager = shopManager;
+            window.eventManager = eventManager;
+            window.modal = modal;
+            window.imageManager = imageManager;
+
+            // Initialize data in parallel with displaying the menu
+            dataManager.initFirebase();
+
+            // Must initialize image first for potential offline play
+            imageManager.getOrCreateImage().then(() => {
+                 viewManager.showView('menu');
+            });
+        };
+
+    </script>
+</body>
+</html>
