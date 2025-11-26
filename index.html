@@ -1,13 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tiles Lapis - Adjacent Swap Puzzle</title>
-    <!-- Google Font for better typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <!-- Firebase Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -16,12 +15,15 @@
         window.firebaseDependencies = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot };
     </script>
     <style>
-        /* --- Base & Typography (Deep Dark Theme) --- */
+        /* --- Base & Typography --- */
         :root {
-            --body-bg: #0b0b1a; /* Very Dark Slate */
-            --primary-color: #ff5722; /* Orange-Red for highlights */
-            --secondary-color: #00bcd4; /* Cyan for secondary elements */
-            --tile-bg: #0f3460; /* Deep Blue for fallback tiles */
+            --body-bg: #0b0b1a;
+            --primary-color: #ff5722;
+            --secondary-color: #00bcd4;
+            --tile-bg: #0f3460;
+            --dark-shadow-primary: #c2401a;
+            --dark-shadow-secondary: #007985;
+            --dark-shadow-tile: #0a274b;
         }
         
         body {
@@ -41,7 +43,7 @@
             touch-action: manipulation;
         }
 
-        /* --- Header & Stats (High Contrast Bars) --- */
+        /* --- Header & Stats --- */
         #header {
             width: 95%;
             max-width: 400px;
@@ -64,9 +66,9 @@
             border: 1px solid var(--primary-color);
         }
 
-        /* --- Main Content Area (Seamless Look - NO BOX) --- */
+        /* --- Main Content Area --- */
         #content-wrapper {
-            background-color: transparent; /* Removed background box */
+            background-color: transparent;
             padding: 20px;
             border-radius: 20px;
             box-shadow: none;
@@ -79,7 +81,6 @@
             border: none;
         }
 
-        /* --- Shared UI Elements --- */
         .view {
             display: none;
             flex-direction: column;
@@ -93,37 +94,44 @@
             text-shadow: 0 0 5px rgba(255, 87, 34, 0.5);
         }
         
-        /* General Button Styling (Io Game Style) */
+        /* General Button Styling - Stylized Game UI Look */
         button {
             background-color: var(--primary-color);
             color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
+            border: 2px solid #ffffff; 
+            padding: 14px 25px;
+            border-radius: 12px; 
             font-size: 1.1em;
             cursor: pointer;
-            transition: background-color 0.1s, transform 0.1s;
-            box-shadow: 0 5px #c2401a;
+            transition: all 0.1s ease;
+            box-shadow: 
+                0 6px var(--dark-shadow-primary),
+                0 0 15px rgba(255, 87, 34, 0.6); 
             margin: 5px;
             font-weight: 700;
             text-transform: uppercase;
+            overflow: hidden; /* Needed for clip-path */
         }
         button:active {
-            box-shadow: 0 1px #c2401a;
-            transform: translateY(4px);
+            box-shadow: 0 1px var(--dark-shadow-primary);
+            transform: translateY(5px);
         }
         button.secondary-btn {
             background-color: var(--secondary-color);
-            box-shadow: 0 5px #0097a7;
+            box-shadow: 
+                0 6px var(--dark-shadow-secondary),
+                0 0 15px rgba(0, 188, 212, 0.6);
         }
         button.secondary-btn:active {
-            box-shadow: 0 1px #0097a7;
-            transform: translateY(4px);
+            box-shadow: 0 1px var(--dark-shadow-secondary);
         }
         button.back-btn {
             background-color: var(--tile-bg);
-            box-shadow: 0 5px #0a274b;
+            box-shadow: 0 6px var(--dark-shadow-tile);
             margin-top: 20px;
+        }
+        button.back-btn:active {
+             box-shadow: 0 1px var(--dark-shadow-tile);
         }
         button:disabled {
             background-color: #444 !important;
@@ -131,23 +139,80 @@
             cursor: not-allowed;
             color: #aaa;
         }
+        
+        .button-content {
+            display: block;
+            line-height: 1.2;
+        }
 
-        /* --- Main Menu Layout --- */
+
+        /* --- Main Menu Layout (Unique Angular Design) --- */
         #main-title {
             font-size: 2.5em;
             letter-spacing: 2px;
             margin-bottom: 5px;
-            text-shadow: 0 0 10px var(--primary-color);
-        }
-        #main-play-area button {
-            background-color: #4CAF50;
-            box-shadow: 0 7px #388E3C;
-        }
-        #main-play-area button:active {
-            box-shadow: 0 1px #388E3C;
+            text-shadow: 0 0 15px var(--secondary-color);
         }
 
-        /* --- Puzzle Grid (Game View) --- */
+        #main-menu-view {
+            justify-content: flex-start;
+            padding-top: 30px;
+        }
+
+        #menu-content-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        /* Large Central Play Button */
+        #play-button-large {
+            width: 80%;
+            height: 120px;
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            box-shadow: 
+                0 10px 0 #2e7d32, /* Darker Green base shadow */
+                0 0 30px rgba(76, 175, 80, 0.7); /* Green outer glow */
+            font-size: 1.4em;
+            border-color: #e8f5e9;
+            clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%); /* Angular shape */
+            border-radius: 0; 
+            transform: skewX(-5deg); /* Dynamic tilt */
+        }
+        #play-button-large:active {
+            transform: translateY(5px) skewX(-5deg);
+            box-shadow: 0 4px 0 #2e7d32;
+        }
+        #play-button-large .button-content {
+            transform: skewX(5deg); /* Counter-tilt content */
+        }
+
+        /* Side Options Grouping */
+        #menu-side-options {
+            display: flex;
+            flex-direction: column;
+            width: 85%;
+            gap: 12px;
+        }
+
+        .side-btn {
+            clip-path: polygon(0% 0%, 90% 0%, 100% 100%, 10% 100%);
+            border-radius: 0;
+            padding: 10px 20px;
+            font-size: 1em;
+            transform: skewX(-10deg);
+        }
+        .side-btn:active {
+            transform: translateY(4px) skewX(-10deg);
+        }
+        .side-btn .button-content {
+            transform: skewX(10deg);
+        }
+
+        /* --- Puzzle Grid --- */
         #puzzle-grid {
             display: grid;
             width: 100%;
@@ -157,31 +222,28 @@
             border: 4px solid #4CAF50;
             border-radius: 10px;
             flex-shrink: 0;
-            /* Ensures 1:1 aspect ratio */
         }
         .tile {
             position: absolute;
             background-size: cover;
             background-position: center;
-            border: 2px solid var(--body-bg); /* Use body background for separation */
+            border: 2px solid var(--body-bg);
             box-sizing: border-box;
             cursor: pointer;
-            transition: transform 0.1s ease-out, top 0.1s ease-out, left 0.1s ease-out; /* Faster transitions for swapping */
-            touch-action: manipulation; /* Enable touch interaction */
+            transition: transform 0.1s ease-out, top 0.1s ease-out, left 0.1s ease-out;
+            touch-action: manipulation;
             z-index: 1;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.1); 
             border-radius: 5px;
         }
         
-        /* New: Selected Tile Style */
         .tile.selected {
             z-index: 10;
-            border: 3px solid var(--secondary-color); /* Highlight for selection */
+            border: 3px solid var(--secondary-color);
             box-shadow: 0 0 20px var(--secondary-color), inset 0 0 10px white;
             transform: scale(1.05);
         }
 
-        /* Fallback for offline mode */
         .fallback-tile {
             background-color: var(--tile-bg) !important;
             color: white;
@@ -194,7 +256,7 @@
 
         /* --- Shop & Events Styling --- */
         .store-item {
-            background-color: #1a1a2e; /* Use a darker box for individual items */
+            background-color: #1a1a2e;
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 10px;
@@ -203,6 +265,17 @@
             align-items: center;
             text-align: left;
             border: 1px solid var(--tile-bg);
+        }
+        
+        #lang-buttons button {
+            width: 100%;
+            margin-bottom: 8px;
+            transform: none; /* Override menu skew for settings buttons */
+            clip-path: none;
+            border-radius: 8px;
+        }
+        #lang-buttons button:active {
+            transform: translateY(4px);
         }
 
         /* --- Modal Styling --- */
@@ -230,6 +303,12 @@
         }
         #modal-actions button {
             margin: 10px 5px;
+            transform: none;
+            clip-path: none;
+            border-radius: 8px;
+        }
+        #modal-actions button:active {
+            transform: translateY(4px);
         }
     </style>
 </head>
@@ -237,7 +316,7 @@
 
     <div id="header">
         <div class="stat">
-            Level: <span id="current-level-display">--</span>
+            <span id="label-level">Level</span>: <span id="current-level-display">--</span>
         </div>
         <div class="stat">
             <span style="font-size: 1.2em;">💰</span> <span id="coin-display">--</span>
@@ -245,25 +324,33 @@
     </div>
 
     <div id="content-wrapper">
-        <!-- Main Menu View -->
+        <!-- Main Menu View (Highly Stylized) -->
         <div id="main-menu-view" class="view" style="display: flex;">
             <h2 id="main-title">TILES LAPIS</h2>
             
-            <div id="main-play-area">
-                <button onclick="viewManager.showView('puzzle')">
-                    <span style="font-size: 1.5em;">▶️</span><br>
-                    PLAY LEVEL <span id="menu-level-display">--</span>
+            <div id="menu-content-container">
+                <!-- Large Play Button -->
+                <button id="play-button-large" onclick="viewManager.showView('puzzle')">
+                    <span class="button-content">
+                        <span style="font-size: 1.8em;">▶️</span><br>
+                        <span id="menu-play-label">PLAY LEVEL</span> <span id="menu-level-display">--</span>
+                    </span>
                 </button>
+                
+                <!-- Secondary Options (Angular Side Stack) -->
+                <div id="menu-side-options">
+                    <button class="secondary-btn side-btn" onclick="viewManager.showView('shop')">
+                        <span class="button-content"><span id="menu-shop-label">🛒 SHOP</span></span>
+                    </button>
+                    <button class="secondary-btn side-btn" onclick="viewManager.showView('events')">
+                        <span class="button-content"><span id="menu-events-label">🎁 EVENTS</span></span>
+                    </button>
+                    <button class="secondary-btn side-btn" onclick="viewManager.showView('settings')">
+                        <span class="button-content"><span id="menu-settings-label">⚙️ SETTINGS</span></span>
+                    </button>
+                </div>
             </div>
-
-            <div id="menu-secondary-options">
-                <button class="secondary-btn" onclick="viewManager.showView('shop')">
-                    🛒 SHOP
-                </button>
-                <button class="secondary-btn" onclick="viewManager.showView('events')">
-                    🎁 EVENTS
-                </button>
-            </div>
+            
             <div id="auth-status"></div>
         </div>
 
@@ -272,57 +359,57 @@
             <h2 id="puzzle-status">Level -- | Swaps: 0</h2>
             <div id="puzzle-grid"></div>
             <div id="controls">
-                <button onclick="puzzleGame.shuffleTiles()">🔄 Reshuffle</button>
-                <button onclick="puzzleGame.useHint()">💡 Hint (<span id="hints-display">0</span>)</button>
+                <button onclick="puzzleGame.shuffleTiles()"><span id="btn-reshuffle" class="button-content">🔄 Reshuffle</span></button>
+                <button onclick="puzzleGame.useHint()"><span id="btn-hint" class="button-content">💡 Hint</span> (<span id="hints-display">0</span>)</button>
             </div>
-            <button class="back-btn" onclick="viewManager.showView('menu')">Exit to Menu</button>
+            <button class="back-btn" onclick="viewManager.showView('menu')"><span id="btn-exit-menu">Exit to Menu</span></button>
         </div>
 
         <!-- Shop View -->
         <div id="shop-view" class="view">
-            <h2>🛒 The Store</h2>
-            <p style="color: #90a4ae;">Spend coins to get better gear!</p>
+            <h2 id="shop-title">🛒 The Store</h2>
+            <p id="shop-subtitle" style="color: #90a4ae;">Spend coins to get better gear!</p>
             <div id="shop-list">
                 <div class="store-item">
                     <div class="item-details">
-                        <h4>Hint Pack (x3)</h4>
-                        <p>Reveals the correct position of one random tile.</p>
+                        <h4 id="item-hint-title">Hint Pack (x3)</h4>
+                        <p id="item-hint-desc">Reveals the correct position of one random tile.</p>
                     </div>
-                    <button onclick="shopManager.buyItem('hints', 30)">
+                    <button id="item-hint-btn" onclick="shopManager.buyItem('hints', 30)">
                         30 💰 Buy
                     </button>
                 </div>
                 <div class="store-item">
                     <div class="item-details">
-                        <h4>Background Change Token (BC)</h4>
-                        <p>Get a brand new puzzle image instantly for the next level!</p>
+                        <h4 id="item-bg-title">Background Change Token (BC)</h4>
+                        <p id="item-bg-desc">Get a brand new puzzle image instantly for the next level!</p>
                     </div>
-                    <button onclick="shopManager.buyItem('bg_token', 50)">
+                    <button id="item-bg-btn" onclick="shopManager.buyItem('bg_token', 50)">
                         50 💰 Buy
                     </button>
                 </div>
                 <div class="store-item">
                     <div class="item-details">
-                        <h4>Level Skip Token (LST)</h4>
-                        <p>Skip the current level and advance to the next size.</p>
+                        <h4 id="item-skip-title">Level Skip Token (LST)</h4>
+                        <p id="item-skip-desc">Skip the current level and advance to the next size.</p>
                     </div>
-                    <button onclick="shopManager.buyItem('level_skip', 150)">
+                    <button id="item-skip-btn" onclick="shopManager.buyItem('level_skip', 150)">
                         150 💰 Buy
                     </button>
                 </div>
             </div>
-            <button class="back-btn" onclick="viewManager.showView('menu')">Back to Menu</button>
+            <button class="back-btn" onclick="viewManager.showView('menu')"><span id="btn-back-menu-shop">Back to Menu</span></button>
         </div>
 
         <!-- Events View -->
         <div id="events-view" class="view">
-            <h2>🎁 Events & Collabs</h2>
-            <p style="color: var(--secondary-color);">Daily rewards and special coins await!</p>
+            <h2 id="events-title">🎁 Events & Collabs</h2>
+            <p id="events-subtitle" style="color: var(--secondary-color);">Daily rewards and special coins await!</p>
             <div id="event-list">
                 <div class="store-item">
                     <div class="item-details">
-                        <h4>Welcome Bonus</h4>
-                        <p>Free 50 coins for joining the sliding community!</p>
+                        <h4 id="event-welcome-title">Welcome Bonus</h4>
+                        <p id="event-welcome-desc">Free 50 coins for joining the sliding community!</p>
                     </div>
                     <button id="claim-welcome" onclick="eventManager.claimWelcome(50)">
                         Claim 50 💰
@@ -330,15 +417,27 @@
                 </div>
                 <div class="store-item">
                     <div class="item-details">
-                        <h4>Offline Status</h4>
-                        <p>The current puzzle image is cached for offline play.</p>
+                        <h4 id="event-offline-title">Offline Status</h4>
+                        <p id="event-offline-desc">The current puzzle image is cached for offline play.</p>
                     </div>
                     <button disabled>
                         Ready
                     </button>
                 </div>
             </div>
-            <button class="back-btn" onclick="viewManager.showView('menu')">Back to Menu</button>
+            <button class="back-btn" onclick="viewManager.showView('menu')"><span id="btn-back-menu-events">Back to Menu</span></button>
+        </div>
+        
+        <!-- Settings View -->
+        <div id="settings-view" class="view">
+            <h2 id="settings-title">⚙️ Settings</h2>
+            <div id="language-selection">
+                <h4 id="lang-select-title">Language Selection</h4>
+                <div id="lang-buttons">
+                    <!-- Language buttons populated by script -->
+                </div>
+            </div>
+            <button class="back-btn" onclick="viewManager.showView('menu')"><span id="btn-back-menu-settings">Back to Menu</span></button>
         </div>
 
     </div>
@@ -355,11 +454,12 @@
     </div>
 
     <script type="module">
-        // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
-        const ImageCacheKey = 'puzzleImageBase64';
+        const ImageCacheKey = 'puzzleImagesBase64s';
+        const MAX_CACHED_IMAGES = 3;
+        const LANG_STORAGE_KEY = 'userLanguage';
 
         const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot } = window.firebaseDependencies;
 
@@ -373,14 +473,124 @@
             bgTokens: 0, 
             levelSkipTokens: 0,
             claimedWelcome: false,
+            language: localStorage.getItem(LANG_STORAGE_KEY) || 'en'
         };
 
-        // --- Image Caching and Offline Manager ---
+        const localization = {
+            currentLang: userData.language,
+            languages: {
+                'en': 'English',
+                'ne': 'नेपाली (Nepali)',
+                'es': 'Español (Spanish)',
+                'fil': 'Filipino'
+            },
+            strings: {
+                'label-level': { 'en': 'Level', 'ne': 'स्तर', 'es': 'Nivel', 'fil': 'Antas' },
+                'main-title': { 'en': 'TILES LAPIS', 'ne': 'टाइल लापिस', 'es': 'AZULEJOS LAPIS', 'fil': 'MGA TILE LAPIS' },
+                'menu-play-label': { 'en': 'PLAY LEVEL', 'ne': 'स्तर खेल्नुहोस्', 'es': 'JUGAR NIVEL', 'fil': 'MAGLARO SA ANTAS' },
+                'menu-shop-label': { 'en': '🛒 SHOP', 'ne': '🛒 पसल', 'es': '🛒 TIENDA', 'fil': '🛒 BILIHAN' },
+                'menu-events-label': { 'en': '🎁 EVENTS', 'ne': '🎁 कार्यक्रम', 'es': '🎁 EVENTOS', 'fil': '🎁 KAGANAPAN' },
+                'menu-settings-label': { 'en': '⚙️ SETTINGS', 'ne': '⚙️ सेटिङहरू', 'es': '⚙️ AJUSTES', 'fil': '⚙️ MGA SETTING' },
+                'btn-reshuffle': { 'en': '🔄 Reshuffle', 'ne': '🔄 फेरबदल', 'es': '🔄 Rebarajar', 'fil': '🔄 Maglipat' },
+                'btn-hint': { 'en': '💡 Hint', 'ne': '💡 संकेत', 'es': '💡 Pista', 'fil': '💡 Palatandaan' },
+                'btn-exit-menu': { 'en': 'Exit to Menu', 'ne': 'मेनुमा फर्कनुहोस्', 'es': 'Salir al Menú', 'fil': 'Umalis sa Menu' },
+                
+                'shop-title': { 'en': '🛒 The Store', 'ne': '🛒 पसल', 'es': '🛒 La Tienda', 'fil': '🛒 Ang Tindahan' },
+                'shop-subtitle': { 'en': 'Spend coins to get better gear!', 'ne': 'राम्रो गियर पाउन सिक्का खर्च गर्नुहोस्!', 'es': '¡Gasta monedas para conseguir mejor equipo!', 'fil': 'Gumastos ng barya para sa mas mahusay na gamit!' },
+                'item-hint-title': { 'en': 'Hint Pack (x3)', 'ne': 'संकेत प्याक (x3)', 'es': 'Paquete de Pistas (x3)', 'fil': 'Pangkat ng Palatandaan (x3)' },
+                'item-hint-desc': { 'en': 'Reveals the correct position of one random tile.', 'ne': 'एक यादृच्छिक टाइलको सही स्थिति प्रकट गर्दछ।', 'es': 'Revela la posición correcta de una ficha aleatoria.', 'fil': 'Ipinapakita ang tamang posisyon ng isang random na tile.' },
+                'item-bg-title': { 'en': 'Background Change Token (BC)', 'ne': 'पृष्ठभूमि परिवर्तन टोकन', 'es': 'Ficha de Cambio de Fondo', 'fil': 'Token sa Pagbabago ng Background' },
+                'item-bg-desc': { 'en': 'Get a brand new puzzle image instantly for the next level!', 'ne': 'अर्को स्तरको लागि तुरुन्तै नयाँ पजल छवि पाउनुहोस्!', 'es': '¡Obtén una imagen de rompecabezas nueva al instante para el siguiente nivel!', 'fil': 'Kumuha ng bagong larawan ng puzzle agad para sa susunod na antas!' },
+                'item-skip-title': { 'en': 'Level Skip Token (LST)', 'ne': 'स्तर छोड्ने टोकन', 'es': 'Ficha para Omitir Nivel', 'fil': 'Token sa Pag-skip ng Antas' },
+                'item-skip-desc': { 'en': 'Skip the current level and advance to the next size.', 'ne': 'हालको स्तर छोड्नुहोस् र अर्को आकारमा अगाडि बढ्नुहोस्।', 'es': 'Omite el nivel actual y avanza al siguiente tamaño.', 'fil': 'Laktawan ang kasalukuyang antas at umabante sa susunod na laki.' },
+                
+                'events-title': { 'en': '🎁 Events & Collabs', 'ne': '🎁 कार्यक्रम र सहकार्य', 'es': '🎁 Eventos y Colaboraciones', 'fil': '🎁 Mga Kaganapan at Collab' },
+                'events-subtitle': { 'en': 'Daily rewards and special coins await!', 'ne': 'दैनिक पुरस्कार र विशेष सिक्का प्रतीक्षामा छन्!', 'es': '¡Recompensas diarias y monedas especiales esperan!', 'fil': 'Naghihintay ang pang-araw-araw na gantimpala at espesyal na barya!' },
+                'event-welcome-title': { 'en': 'Welcome Bonus', 'ne': 'स्वागत बोनस', 'es': 'Bono de Bienvenida', 'fil': 'Bonus sa Pagtanggap' },
+                'event-welcome-desc': { 'en': 'Free 50 coins for joining the sliding community!', 'ne': 'स्लाइडिङ समुदायमा सामेल हुनको लागि 50 सिक्का निःशुल्क!', 'es': '¡50 monedas gratis por unirte a la comunidad deslizante!', 'fil': 'Libreng 50 barya para sa pagsali sa sliding community!' },
+                'event-offline-title': { 'en': 'Offline Status', 'ne': 'अफलाइन स्थिति', 'es': 'Estado Desconectado', 'fil': 'Katayuan Offline' },
+                'event-offline-desc': { 'en': 'The current puzzle image is cached for offline play.', 'ne': 'हालको पजल छवि अफलाइन खेलको लागि क्यास गरिएको छ।', 'es': 'La imagen actual del rompecabezas está en caché para jugar sin conexión.', 'fil': 'Ang kasalukuyang larawan ng puzzle ay naka-cache para sa offline na laro.' },
+
+                'settings-title': { 'en': '⚙️ Settings', 'ne': '⚙️ सेटिङहरू', 'es': '⚙️ Ajustes', 'fil': '⚙️ Mga Setting' },
+                'lang-select-title': { 'en': 'Language Selection', 'ne': 'भाषा चयन', 'es': 'Selección de Idioma', 'fil': 'Pagpili ng Wika' },
+                
+                'modal-hint-success': { 'en': 'Hint Used! 💡', 'ne': 'संकेत प्रयोग गरियो! 💡', 'es': '¡Pista Usada! 💡', 'fil': 'Ginagamit ang Palatandaan! 💡' },
+                'modal-win-title': { 'en': 'Level Cleared! 🎉', 'ne': 'स्तर पूरा भयो! 🎉', 'es': '¡Nivel Completado! 🎉', 'fil': 'Tapos na ang Antas! 🎉' },
+                'modal-win-message': { 'en': 'You earned 10 💰 and completed Level $SIZE$x$SIZE$ in $MOVES$ swaps! The next challenge is $NEXTSIZE$ x $NEXTSIZE$.', 'ne': 'तपाईंले 10 💰 कमाउनुभयो र $MOVES$ स्वैपमा स्तर $SIZE$x$SIZE$ पूरा गर्नुभयो! अर्को चुनौती $NEXTSIZE$ x $NEXTSIZE$ हो।', 'es': '¡Ganaste 10 💰 y completaste el Nivel $SIZE$x$SIZE$ en $MOVES$ intercambios! El próximo desafío es $NEXTSIZE$ x $NEXTSIZE$.', 'fil': 'Nakakuha ka ng 10 💰 at natapos ang Antas $SIZE$x$SIZE$ sa $MOVES$ na pagpapalit! Ang susunod na hamon ay $NEXTSIZE$ x $NEXTSIZE$.' },
+                'puzzle-status-template': { 'en': 'Level $SIZE$x$SIZE$ | Swaps: $MOVES$', 'ne': 'स्तर $SIZE$x$SIZE$ | स्वैप: $MOVES$', 'es': 'Nivel $SIZE$x$SIZE$ | Intercambios: $MOVES$', 'fil': 'Antas $SIZE$x$SIZE$ | Palitan: $MOVES$' },
+            },
+
+            setLanguage(langCode) {
+                if (this.languages[langCode]) {
+                    this.currentLang = langCode;
+                    localStorage.setItem(LANG_STORAGE_KEY, langCode);
+                    userData.language = langCode;
+                    this.updateText();
+                }
+            },
+
+            getString(key, replacements = {}) {
+                const text = this.strings[key] ? (this.strings[key][this.currentLang] || this.strings[key]['en']) : `MISSING_KEY_${key}`;
+                let result = text;
+                for (const [placeholder, value] of Object.entries(replacements)) {
+                    result = result.replace(new RegExp(`\\$${placeholder}`, 'g'), value);
+                }
+                return result;
+            },
+
+            updateText() {
+                const elements = document.querySelectorAll('[id^="label-"], [id^="menu-"], [id^="btn-"], [id^="shop-"], [id^="item-"], [id^="events-"], [id^="event-"], [id^="settings-"], [id^="lang-"]');
+                elements.forEach(el => {
+                    const key = el.id;
+                    if (this.strings[key]) {
+                        // For button content wrappers, we update the inner span
+                        if (el.classList.contains('button-content')) {
+                             el.innerHTML = this.getString(key);
+                        } else {
+                            el.textContent = this.getString(key);
+                        }
+                    }
+                });
+                
+                // Special handling for dynamic button texts
+                const buyText = { 'en': ' Buy', 'ne': ' किन्नुहोस्', 'es': ' Comprar', 'fil': ' Bilhin' };
+                document.getElementById('item-hint-btn').textContent = `30 💰${buyText[this.currentLang] || buyText['en']}`;
+                document.getElementById('item-bg-btn').textContent = `50 💰${buyText[this.currentLang] || buyText['en']}`;
+                document.getElementById('item-skip-btn').textContent = `150 💰${buyText[this.currentLang] || buyText['en']}`;
+
+                // Update puzzle status template
+                if (viewManager.currentView === 'puzzle') {
+                    puzzleGame.updateStatus();
+                }
+                
+                this.populateLanguageButtons();
+                dataManager.updateUI();
+            },
+
+            populateLanguageButtons() {
+                const container = document.getElementById('lang-buttons');
+                container.innerHTML = '';
+                for (const code in this.languages) {
+                    const button = document.createElement('button');
+                    button.textContent = this.languages[code];
+                    if (code === this.currentLang) {
+                        button.classList.add('secondary-btn');
+                    } else {
+                        button.style.backgroundColor = 'var(--tile-bg)';
+                        button.style.boxShadow = '0 5px #0a274b';
+                    }
+                    button.onclick = () => {
+                        this.setLanguage(code);
+                        viewManager.showView('settings');
+                    };
+                    container.appendChild(button);
+                }
+            }
+        };
 
         const imageManager = {
             cachedImage: null,
 
-            // Converts an image URL to a Base64 string for storage
             async urlToBase64(url) {
                 try {
                     const response = await fetch(url);
@@ -393,53 +603,61 @@
                         reader.readAsDataURL(blob);
                     });
                 } catch (e) {
-                    console.error("Failed to fetch image, going offline:", e);
-                    return null; // Return null on failure
+                    return null;
                 }
             },
 
-            // Tries to load from cache, or fetches and caches a new image
             async getOrCreateImage(forceNew = false) {
-                if (!forceNew && this.cachedImage) {
+                let cacheArray = JSON.parse(localStorage.getItem(ImageCacheKey) || '[]');
+                
+                if (!forceNew && cacheArray.length > 0) {
+                    this.cachedImage = cacheArray[0];
                     return this.cachedImage;
                 }
 
-                if (!forceNew && localStorage.getItem(ImageCacheKey)) {
-                    this.cachedImage = localStorage.getItem(ImageCacheKey);
-                    return this.cachedImage;
-                }
-
-                // If forceNew or no cache exists, fetch a new image (400x400)
                 const newImageBase64 = await this.urlToBase64('https://picsum.photos/400/400?random=' + Date.now());
                 
                 if (newImageBase64) {
-                    localStorage.setItem(ImageCacheKey, newImageBase64);
+                    cacheArray.unshift(newImageBase64);
+                    cacheArray = cacheArray.slice(0, MAX_CACHED_IMAGES); 
+                    localStorage.setItem(ImageCacheKey, JSON.stringify(cacheArray));
                     this.cachedImage = newImageBase64;
                     return newImageBase64;
                 } else {
-                    // Fallback to solid color if offline/failed to fetch
-                    console.warn("Using offline mode fallback placeholder.");
-                    this.cachedImage = null; // Signal that no Base64 image is available
-                    return null; 
+                    this.cachedImage = null;
+                    return null;
                 }
             },
             
-            // Forces a new image, used when buying a BG token or advancing a level
             async changeBackground() {
-                localStorage.removeItem(ImageCacheKey);
-                this.cachedImage = null;
-                // Pre-fetch the new image so it's ready for the next game
-                return this.getOrCreateImage(true);
+                let cacheArray = JSON.parse(localStorage.getItem(ImageCacheKey) || '[]');
+                
+                if (cacheArray.length > 1) {
+                    const nextImage = cacheArray.shift();
+                    cacheArray.push(nextImage); 
+                    localStorage.setItem(ImageCacheKey, JSON.stringify(cacheArray));
+                    
+                    this.cachedImage = cacheArray[0] || null;
+
+                    // If we only had cached images, try fetching a fresh one in the background
+                    if (cacheArray.length < MAX_CACHED_IMAGES) {
+                        this.getOrCreateImage(true);
+                    }
+
+                } else {
+                    // Force fetch new if only one or zero images exist
+                    await this.getOrCreateImage(true);
+                }
             }
         };
 
-        // --- View Management ---
         const viewManager = {
             views: {
                 'menu': document.getElementById('main-menu-view'),
                 'puzzle': document.getElementById('puzzle-view'),
                 'shop': document.getElementById('shop-view'),
-                'events': document.getElementById('events-view')
+                'events': document.getElementById('events-view'),
+                'settings': document.getElementById('settings-view')
             },
             currentView: 'menu',
             async showView(viewName) {
@@ -453,11 +671,10 @@
                         puzzleGame.startGame(userData.currentLevel);
                     }
                     dataManager.updateUI();
+                    localization.updateText();
                 }
             }
         };
-
-        // --- Data Persistence and Initialization ---
 
         const dataManager = {
             dbRef: null,
@@ -497,7 +714,9 @@
 
                 onSnapshot(this.dbRef, async (docSnap) => {
                     if (docSnap.exists()) {
-                        userData = { ...userData, ...docSnap.data() };
+                        const remoteData = docSnap.data();
+                        userData = { ...userData, ...remoteData };
+                        localization.setLanguage(userData.language || 'en');
                     } else {
                         await setDoc(this.dbRef, userData);
                     }
@@ -524,21 +743,22 @@
                 document.getElementById('menu-level-display').textContent = userData.currentLevel + 'x' + userData.currentLevel;
 
                 const welcomeBtn = document.getElementById('claim-welcome');
+                const claimText = ({ 'en': 'Claim 50 💰', 'ne': 'दावी 50 💰', 'es': 'Reclamar 50 💰', 'fil': 'Kolektahin 50 💰' })[localization.currentLang] || 'Claim 50 💰';
+                const claimedText = ({ 'en': 'Claimed!', 'ne': 'दावी गरियो!', 'es': '¡Reclamado!', 'fil': 'Nakolekta!' })[localization.currentLang] || 'Claimed!';
+
                 if (userData.claimedWelcome) {
-                    welcomeBtn.textContent = 'Claimed!';
+                    welcomeBtn.textContent = claimedText;
                     welcomeBtn.disabled = true;
                     welcomeBtn.style.backgroundColor = '#4CAF50';
                     welcomeBtn.style.boxShadow = '0 3px #388E3C';
                 } else {
-                    welcomeBtn.textContent = 'Claim 50 💰';
+                    welcomeBtn.textContent = claimText;
                     welcomeBtn.disabled = false;
                     welcomeBtn.style.backgroundColor = 'var(--primary-color)';
-                    welcomeBtn.style.boxShadow = '0 3px #c2401a';
+                    welcomeBtn.style.boxShadow = '0 3px var(--dark-shadow-primary)';
                 }
             }
         };
-
-        // --- Shop Management ---
 
         const shopManager = {
             async buyItem(item, cost) {
@@ -558,7 +778,7 @@
                     message = 'The puzzle background has been refreshed for your next game!';
                 } else if (item === 'level_skip') {
                     if (userData.currentLevel >= 6) {
-                        userData.coins += cost; // Refund
+                        userData.coins += cost;
                         message = 'You are already at max level (6x6). No need to skip!';
                     } else {
                         userData.currentLevel = Math.min(userData.currentLevel + 1, 6);
@@ -571,8 +791,6 @@
             }
         };
 
-        // --- Event Management ---
-
         const eventManager = {
             async claimWelcome(amount) {
                 if (userData.claimedWelcome) return;
@@ -581,14 +799,12 @@
                 userData.claimedWelcome = true;
 
                 await dataManager.saveUserData();
-                modal.show('Bonus Claimed! 🎉', 
+                modal.show(localization.getString('event-welcome-title'), 
                     `You received ${amount} 💰! Your coins are now ${userData.coins}.`, 
-                    [{ text: 'Got It!', action: 'modal.hide()' }] 
+                    [{ text: ({ 'en': 'Got It!', 'ne': 'बुझ्यो!', 'es': '¡Entendido!', 'fil': 'Nakuha!' })[localization.currentLang] || 'Got It!', action: 'modal.hide()' }] 
                 );
             }
         };
-
-        // --- Puzzle Game Logic (Swap Puzzle Logic) ---
 
         const puzzleGame = {
             tiles: [], size: 0, moves: 0, isSolving: false,
@@ -643,12 +859,10 @@
                         tile.el.style.backgroundPosition = `${bgX}% ${bgY}%`;
                         tile.el.style.backgroundSize = `${size * 100}% ${size * 100}%`;
                     } else {
-                        // Offline Fallback style: Display number
                         tile.el.classList.add('fallback-tile');
                         tile.el.textContent = (i + 1).toString();
                     }
                     
-                    // Attach click/tap handler for swapping
                     tile.el.addEventListener('click', () => this.handleTileClick(tile));
 
                     this.tiles.push(tile);
@@ -661,7 +875,6 @@
                 const tempPositions = Array.from({length: totalTiles}, (_, i) => i);
                 let solvable = false;
                 
-                // Shuffle until an even permutation (solvable for swap puzzle) is found
                 while (!solvable) {
                     for (let i = totalTiles - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
@@ -669,10 +882,8 @@
                     }
                     
                     for (let i = 0; i < totalTiles; i++) {
-                        // Find the position index where the tile with ID 'i' landed
                         this.tiles[i].currentPos = tempPositions.findIndex(p => p === this.tiles[i].id); 
                     }
-                    // Solvable if the permutation is even
                     solvable = this.isSolvable(tempPositions); 
                 }
 
@@ -683,13 +894,10 @@
             },
 
             isSolvable(positions) { 
-                // For an N^2 Swap Puzzle, it's solvable if the total number of inversions is even.
                 let inversions = 0;
                 
                 for (let i = 0; i < positions.length; i++) {
                     for (let j = i + 1; j < positions.length; j++) {
-                        // Check if a tile with a smaller ID is placed after a tile with a larger ID 
-                        // The 'positions' array holds the ID of the tile at that position index.
                         if (positions[i] > positions[j]) { 
                              inversions++;
                         }
@@ -701,7 +909,6 @@
             
             updateTilePositions() { 
                 const size = this.size;
-                // Update the row/col properties of each tile based on its current position index
                 for (let i = 0; i < this.tiles.length; i++) {
                     const tile = this.tiles.find(t => t.currentPos === i); 
                     if (tile) {
@@ -714,7 +921,6 @@
             renderTiles() { 
                 const size = this.size;
                 const tileSizePercentage = 100 / size;
-                // Sort by current position index for correct grid drawing
                 const sortedTiles = this.tiles.sort((a, b) => a.currentPos - b.currentPos);
 
                 sortedTiles.forEach(tile => {
@@ -731,20 +937,17 @@
             isAdjacent(tileA, tileB) {
                 const dx = Math.abs(tileA.col - tileB.col);
                 const dy = Math.abs(tileA.row - tileB.row);
-                // Must be 1 unit distance in one axis, 0 in the other
                 return (dx + dy === 1);
             },
             
             async swapTilePositions(tileA, tileB) {
-                // Remove selection highlight before the swap animation
                 tileA.el.classList.remove('selected');
                 
-                // Swap the positional indices in the data model
                 [tileA.currentPos, tileB.currentPos] = [tileB.currentPos, tileA.currentPos];
                 
                 this.moves++;
                 this.updateStatus();
-                this.renderTiles(); // Re-render to trigger the CSS transition for the swap
+                this.renderTiles();
 
                 if (this.checkWin()) {
                     await this.handleWin();
@@ -755,55 +958,67 @@
                 if (this.isSolving) return;
 
                 if (this.selectedTile === clickedTile) {
-                    // Deselect if clicking the same tile
                     this.selectedTile.el.classList.remove('selected');
                     this.selectedTile = null;
                 } else if (this.selectedTile) {
-                    // Check if the newly clicked tile is adjacent to the selected one
                     if (this.isAdjacent(this.selectedTile, clickedTile)) {
                         this.swapTilePositions(this.selectedTile, clickedTile);
                         this.selectedTile = null;
                     } else {
-                        // Not adjacent: Deselect old, select new
                         this.selectedTile.el.classList.remove('selected');
                         this.selectedTile = clickedTile;
                         this.selectedTile.el.classList.add('selected');
                     }
                 } else {
-                    // No tile selected: Select the clicked tile
                     this.selectedTile = clickedTile;
                     this.selectedTile.el.classList.add('selected');
                 }
             },
 
             checkWin() { 
-                // Win state is achieved when currentPos matches correctPos for all tiles
                 return this.tiles.every(tile => tile.id === tile.currentPos); 
             },
 
             async handleWin() {
                 this.isSolving = true;
                 userData.coins += 10;
+                const oldLevel = userData.currentLevel;
                 userData.currentLevel = Math.min(userData.currentLevel + 1, 6);
                 userData.maxLevel = Math.max(userData.maxLevel, userData.currentLevel);
-                // Trigger image change for the *next* game
                 imageManager.changeBackground(); 
 
                 await dataManager.saveUserData();
-                dataManager.updateUI(); // Update coins/level display right away
+                dataManager.updateUI();
+
+                const message = localization.getString('modal-win-message', {
+                    'SIZE': oldLevel,
+                    'MOVES': this.moves,
+                    'NEXTSIZE': userData.currentLevel
+                });
+
+                const nextLevelText = ({ 'en': `Next Level (${userData.currentLevel}x${userData.currentLevel})`, 'ne': `अर्को स्तर (${userData.currentLevel}x${userData.currentLevel})`, 'es': `Siguiente Nivel (${userData.currentLevel}x${userData.currentLevel})`, 'fil': `Susunod na Antas (${userData.currentLevel}x${userData.currentLevel})` })[localization.currentLang] || `Next Level (${userData.currentLevel}x${userData.currentLevel})`;
+                const exitMenuText = localization.getString('btn-exit-menu');
 
                 const actions = [
-                    { text: 'Next Level (' + userData.currentLevel + 'x' + userData.currentLevel + ')', action: `puzzleGame.startGame(${userData.currentLevel}); modal.hide();` },
-                    { text: 'Menu', action: `viewManager.showView('menu'); modal.hide();` }
+                    { 
+                        text: nextLevelText, 
+                        action: `puzzleGame.startGame(${userData.currentLevel}); modal.hide();` 
+                    },
+                    { 
+                        text: exitMenuText, 
+                        action: `viewManager.showView('menu'); modal.hide();` 
+                    }
                 ];
 
-                modal.show('Level Cleared! 🎉', 
-                    `You earned 10 💰 and completed Level ${this.size}x${this.size} in ${this.moves} swaps! The next challenge is $${userData.currentLevel} \times ${userData.currentLevel}$`, 
-                    actions);
+                modal.show(localization.getString('modal-win-title'), message, actions);
             },
 
             updateStatus() {
-                document.getElementById('puzzle-status').textContent = `Level ${this.size}x${this.size} | Swaps: ${this.moves}`;
+                const statusTemplate = localization.getString('puzzle-status-template');
+                const statusText = statusTemplate
+                    .replace('$SIZE$', this.size).replace('$MOVES$', this.moves);
+
+                document.getElementById('puzzle-status').textContent = statusText;
                 document.getElementById('hints-display').textContent = userData.hintsAvailable;
             },
 
@@ -821,24 +1036,28 @@
 
                 userData.hintsAvailable--;
                 await dataManager.saveUserData();
-                dataManager.updateUI(); // Update hint count immediately
+                dataManager.updateUI();
 
                 const hintTile = unsolvedTiles[Math.floor(Math.random() * unsolvedTiles.length)];
                 
-                // Temporarily highlight the tile
                 hintTile.el.style.border = '3px solid #FF0000';
-                setTimeout(() => hintTile.el.style.border = '2px solid var(--body-bg)', 1500); // Revert
+                setTimeout(() => hintTile.el.style.border = '2px solid var(--body-bg)', 1500);
 
                 const correctRow = Math.floor(hintTile.correctPos / this.size) + 1;
                 const correctCol = (hintTile.correctPos % this.size) + 1;
 
-                modal.show('Hint Used! 💡', 
-                    `The highlighted tile (Tile #${hintTile.id + 1}) belongs in Row ${correctRow}, Column ${correctCol}.`, 
+                const hintMessage = ({
+                    'en': `The highlighted tile (Tile #${hintTile.id + 1}) belongs in Row ${correctRow}, Column ${correctCol}.`,
+                    'ne': `हाइलाइट गरिएको टाइल (टाइल #${hintTile.id + 1}) रो ${correctRow}, स्तम्भ ${correctCol} मा पर्छ।`,
+                    'es': `La ficha resaltada (Ficha #${hintTile.id + 1}) pertenece a la Fila ${correctRow}, Columna ${correctCol}.`,
+                    'fil': `Ang naka-highlight na tile (Tile #${hintTile.id + 1}) ay dapat nasa Hilera ${correctRow}, Kolum ${correctCol}.`
+                })[localization.currentLang] || `The highlighted tile (Tile #${hintTile.id + 1}) belongs in Row ${correctRow}, Column ${correctCol}.`;
+
+                modal.show(localization.getString('modal-hint-success'), 
+                    hintMessage, 
                     [{ text: 'Got it!', action: 'modal.hide()' }]);
             },
         };
-
-        // --- Modal System ---
 
         const modal = {
             element: document.getElementById('modal'),
@@ -881,7 +1100,6 @@
         };
 
 
-        // --- Startup ---
         window.onload = () => {
             window.viewManager = viewManager;
             window.puzzleGame = puzzleGame;
@@ -889,11 +1107,12 @@
             window.eventManager = eventManager;
             window.modal = modal;
             window.imageManager = imageManager;
+            window.localization = localization;
 
-            // Initialize data in parallel with displaying the menu
+            localization.setLanguage(userData.language);
+            localization.updateText();
             dataManager.initFirebase();
 
-            // Must initialize image first for potential offline play
             imageManager.getOrCreateImage().then(() => {
                  viewManager.showView('menu');
             });
